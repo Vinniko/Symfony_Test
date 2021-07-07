@@ -5,6 +5,8 @@ namespace App\Repository;
 use App\Entity\Product;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Knp\Component\Pager\PaginatorInterface;
+
 
 /**
  * @method Product|null find($id, $lockMode = null, $lockVersion = null)
@@ -14,37 +16,44 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class ProductRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    private $paginator;
+    public function __construct(ManagerRegistry $registry, PaginatorInterface $paginator)
     {
         parent::__construct($registry, Product::class);
+        $this->paginator = $paginator;
     }
 
     // /**
     //  * @return Product[] Returns an array of Product objects
     //  */
-    /*
-    public function findByExampleField($value)
+    public function findLatest($page, $qtyOnPage = 10)
     {
-        return $this->createQueryBuilder('p')
-            ->andWhere('p.exampleField = :val')
-            ->setParameter('val', $value)
-            ->orderBy('p.id', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult()
-        ;
+        return $this->paginator->paginate(
+            $this->createQueryBuilder('p')
+                ->orderBy('p.createdAt', 'DESC'),
+            $page,
+            $qtyOnPage
+        );
     }
-    */
 
-    /*
-    public function findOneBySomeField($value): ?Product
+    public function findByFilter($page, $qtyOnPage = 10, $filters)
     {
-        return $this->createQueryBuilder('p')
-            ->andWhere('p.exampleField = :val')
-            ->setParameter('val', $value)
-            ->getQuery()
-            ->getOneOrNullResult()
-        ;
+        $keys = array_keys($filters);
+        $qb = $this->createQueryBuilder('p')
+            ->addSelect('o', 'po')
+            ->innerJoin('p.productOptions', 'po')
+            ->innerJoin('po.option_id', 'o')
+            ->orderBy('p.createdAt', 'DESC');
+        foreach($keys as $key){
+            $qb->andWhere('o.title = :key')
+                ->andWhere('po.value = :value')
+                ->setParameter('key', $key)
+                ->setParameter('value', $filters[$key]);
+        }
+        return $this->paginator->paginate(
+            $qb,
+            $page,
+            $qtyOnPage
+        );
     }
-    */
 }
