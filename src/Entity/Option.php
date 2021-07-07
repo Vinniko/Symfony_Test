@@ -2,49 +2,34 @@
 
 namespace App\Entity;
 
-use App\Repository\ProductRepository;
+use App\Repository\OptionRepository;
+use App\Traits\EntityLifecicleTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Validator\Constraints as Assert;
-use App\Traits\EntityLifecicleTrait;
 
 /**
- * @ORM\Entity(repositoryClass=ProductRepository::class)
- * @ORM\Table(name="`products`")
+ * @ORM\Entity(repositoryClass=OptionRepository::class)
+ * @ORM\Table(name="`options`")
  * @ORM\HasLifecycleCallbacks
  */
-class Product
+class Option
 {
     use EntityLifecicleTrait;
     /**
      * @ORM\Id
      * @ORM\GeneratedValue
      * @ORM\Column(type="integer")
-     * @Assert\NotBlank
      */
     private $id;
 
     /**
-     * @ORM\Column(type="string", length=255, unique=true, nullable=false)
-     * @Assert\NotBlank
+     * @ORM\Column(type="string", length=255,  unique=true, nullable=false)
      */
     private $title;
 
     /**
-     * @ORM\Column(type="integer", nullable=false)
-     * @Assert\NotBlank
-     */
-    private $qty;
-
-    /**
-     * @ORM\Column(type="decimal", precision=10, scale=3, nullable=false)
-     * @Assert\NotBlank
-     */
-    private $price;
-
-    /**
-     * @ORM\OneToMany(targetEntity=ProductOption::class, mappedBy="product_id", orphanRemoval=true)
+     * @ORM\OneToMany(targetEntity=ProductOption::class, mappedBy="option_id", orphanRemoval=true)
      */
     private $productOptions;
 
@@ -70,30 +55,6 @@ class Product
         return $this;
     }
 
-    public function getQty(): ?int
-    {
-        return $this->qty;
-    }
-
-    public function setQty(int $qty): self
-    {
-        $this->qty = $qty;
-
-        return $this;
-    }
-
-    public function getPrice(): ?string
-    {
-        return $this->price;
-    }
-
-    public function setPrice(string $price): self
-    {
-        $this->price = $price;
-
-        return $this;
-    }
-
     /**
      * @return Collection|ProductOption[]
      */
@@ -106,7 +67,7 @@ class Product
     {
         if (!$this->productOptions->contains($productOption)) {
             $this->productOptions[] = $productOption;
-            $productOption->setProductId($this);
+            $productOption->setOptionId($this);
         }
 
         return $this;
@@ -116,12 +77,11 @@ class Product
     {
         if ($this->productOptions->removeElement($productOption)) {
             // set the owning side to null (unless already changed)
-            if ($productOption->getProductId() === $this) {
-                $productOption->setProductId(null);
+            if ($productOption->getOptionId() === $this) {
+                $productOption->setOptionId(null);
             }
         }
 
         return $this;
     }
-
 }
