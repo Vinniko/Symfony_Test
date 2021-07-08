@@ -15,7 +15,7 @@ class OptionFixture extends Fixture
     {
         for($i = 0; $i < 30; $i++){
             $option = new Option();
-            $option ->setTitle($this->GenerateWord());
+            $option->setTitle($this->generateWord());
             $manager->persist($option );
         }
         $manager->flush();
