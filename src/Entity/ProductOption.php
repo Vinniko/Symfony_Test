@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\ProductOptionRepository;
 use App\Traits\EntityLifecicleTrait;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * @ORM\Entity(repositoryClass=ProductOptionRepository::class)
@@ -34,6 +35,7 @@ class ProductOption
 
     /**
      * @ORM\Column(type="float", nullable=false)
+     * @Assert\PositiveOrZero
      */
     private $value;
 

@@ -1,6 +1,9 @@
 <?php
 namespace App\Controller;
 
+use App\Entity\Option;
+use App\Entity\ProductOption;
+use App\Repository\OptionRepository;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -8,6 +11,8 @@ use Symfony\Component\HttpFoundation\Request;
 use App\Entity\Product;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use JMS\Serializer\SerializerBuilder;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+
 /**
  * @Route("/api/product")
  */
@@ -73,30 +78,124 @@ class ProductController extends AbstractController
     /**
      * @Route("/store", methods={"POST"})
      */
-    public function store(Request $request): Response
+    public function store(Request $request, OptionRepository $optionRepository, ValidatorInterface $validator): Response
     {
-        $number = random_int(0, 100);
-        #$product = new Product();
-        #$product->set(...
-        /*$errors = $validator->validate($product);
-        if (count($errors) > 0) {
-            return new Response((string) $errors, 400);
-        }*/
-        return $this->render('product/product.html.twig', [
-            'number' => $number,
-        ]);
+        $serializer = SerializerBuilder::create()->build();
+        $data = $request->toArray();
+        $product = new Product();
+        if(array_key_exists('title', $data))$product->setTitle($data['title']);
+        if(array_key_exists('qty', $data))$product->setQty($data['qty']);
+        if(array_key_exists('price', $data))$product->setPrice($data['price']);
+        $errors = $validator->validate($product);
+        if(count($errors) != 0){
+            return new Response(
+                $serializer->serialize(
+                    [
+                        "errors" => $errors
+                    ], 'json'),
+                Response::HTTP_OK,
+                ['Content-Type' => 'application/json']
+            );
+        }
+        $this->getDoctrine()->getManager()->persist($product);
+        $this->getDoctrine()->getManager()->flush();
+        if(array_key_exists('options', $data)) {
+            foreach ($data['options'] as $option){
+                if(array_key_exists('id', $option) && array_key_exists('value', $option)){
+                    $productOption = new ProductOption();
+                    $productOption->setProductId($product);
+                    $productOption->setOptionId($optionRepository->find($option['id']));
+                    $productOption->setValue($option['value']);
+                    $errors = $validator->validate($productOption);
+                    if(count($errors) != 0){
+                        return new Response(
+                            $serializer->serialize(
+                                [
+                                    "errors" => $errors
+                                ], 'json'),
+                            Response::HTTP_OK,
+                            ['Content-Type' => 'application/json']
+                        );
+                    }
+                    $this->getDoctrine()->getManager()->persist($productOption);
+                    $this->getDoctrine()->getManager()->flush();
+                }
+            }
+        }
+        return new Response(
+            $serializer->serialize($this->getDoctrine()
+                ->getRepository(Product::class)
+                ->find($product->getId()), 'json'),
+            Response::HTTP_OK,
+            ['Content-Type' => 'application/json']
+        );
     }
 
     /**
      * @Route("/update/{id}", methods={"PUT"}, requirements={"id"="\d+"})
      */
-    public function update(Request $request, int $id): Response
+    public function update(Request $request, int $id, OptionRepository $optionRepository, ValidatorInterface $validator): Response
     {
-        $number = random_int(0, 100);
-
-        return $this->render('product/product.html.twig', [
-            'number' => $number,
-        ]);
+        $serializer = SerializerBuilder::create()->build();
+        $data = $request->toArray();
+        $product = $this->getDoctrine()
+            ->getRepository(Product::class)
+            ->find($id);
+        if (!$product) {
+            return new JsonResponse([
+                "message" => "Product doesn't exist"
+            ]);
+        }
+        if(array_key_exists('title', $data))$product->setTitle($data['title']);
+        if(array_key_exists('qty', $data))$product->setQty($data['qty']);
+        if(array_key_exists('price', $data))$product->setPrice($data['price']);
+        $errors = $validator->validate($product);
+        if(count($errors) != 0){
+            return new Response(
+                $serializer->serialize(
+                    [
+                        "errors" => $errors
+                    ], 'json'),
+                Response::HTTP_OK,
+                ['Content-Type' => 'application/json']
+            );
+        }
+        $this->getDoctrine()->getManager()->persist($product);
+        $this->getDoctrine()->getManager()->flush();
+        foreach($product->getProductOptions() as $productOption){
+            $optionRepository->find($productOption->getOptionId()->removeProductOption($productOption));
+            $product->removeProductOption($productOption);
+        }
+        if(array_key_exists('options', $data)) {
+            foreach ($data['options'] as $option){
+                if(array_key_exists('id', $option) && array_key_exists('value', $option)){
+                    $productOption = new ProductOption();
+                    $productOption->setProductId($product);
+                    $productOption->setOptionId($optionRepository->find($option['id']));
+                    $productOption->setValue($option['value']);
+                    $errors = $validator->validate($productOption);
+                    if(count($errors) != 0){
+                        return new Response(
+                            $serializer->serialize(
+                                [
+                                    "errors" => $errors
+                                ], 'json'),
+                            Response::HTTP_OK,
+                            ['Content-Type' => 'application/json']
+                        );
+                    }
+                    $this->getDoctrine()->getManager()->persist($productOption);
+                    $this->getDoctrine()->getManager()->flush();
+                }
+            }
+        }
+        return new Response(
+            $serializer->serialize($this->getDoctrine()
+                ->getRepository(Product::class)
+                ->find($product->getId()), 'json'),
+            Response::HTTP_OK,
+            ['Content-Type' => 'application/json']
+        );
     }
 
     /**
@@ -104,10 +203,18 @@ class ProductController extends AbstractController
      */
     public function delete(Request $request, int $id): Response
     {
-        $number = random_int(0, 100);
-
-        return $this->render('product/product.html.twig', [
-            'number' => $number,
+        $product = $this->getDoctrine()
+            ->getRepository(Product::class)
+            ->find($id);
+        if (!$product) {
+            return new JsonResponse([
+                "message" => "Product doesn't exist"
+            ]);
+        }
+        $this->getDoctrine()->getManager()->remove($product);
+        $this->getDoctrine()->getManager()->flush();
+        return new JsonResponse([
+            "message" => "Product has been deleted"
         ]);
     }
 }

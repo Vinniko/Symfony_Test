@@ -7,12 +7,14 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use App\Traits\EntityLifecicleTrait;
 
 /**
  * @ORM\Entity(repositoryClass=ProductRepository::class)
  * @ORM\Table(name="`products`")
  * @ORM\HasLifecycleCallbacks
+ * @UniqueEntity(fields={"title"}, message="Product with this title exists")
  */
 class Product
 {
@@ -21,7 +23,6 @@ class Product
      * @ORM\Id
      * @ORM\GeneratedValue
      * @ORM\Column(type="integer")
-     * @Assert\NotBlank
      */
     private $id;
 
@@ -34,12 +35,14 @@ class Product
     /**
      * @ORM\Column(type="integer", nullable=false)
      * @Assert\NotBlank
+     * @Assert\PositiveOrZero
      */
     private $qty;
 
     /**
      * @ORM\Column(type="decimal", precision=10, scale=3, nullable=false)
      * @Assert\NotBlank
+     * @Assert\PositiveOrZero
      */
     private $price;
 
