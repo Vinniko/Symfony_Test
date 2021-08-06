@@ -19,7 +19,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 class ProductController extends AbstractController
 {
     /**
-     * @Route("/index/{page}", methods={"GET"}, defaults={"page": 1})
+     * @Route("/index/{page}", methods={"GET"}, defaults={"page": 1}, name="product_index")
      */
     public function index(Request $request, int $page): Response
     {
